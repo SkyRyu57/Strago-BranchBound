@@ -54,6 +54,117 @@
     </div>
 </div>
 
+<!-- ==================== Dominic ==================== -->
+<!-- Dominic: Input matriks dinamis, render tabel, resize -->
+<script>
+    // Tugas: Membuat antarmuka tabel input untuk matriks WAKTU dan BIAYA,
+    // menangani perubahan ukuran n, menyimpan data matriks.
+
+    let currentN = 8;
+    let waktuMatrix = [];
+    let biayaMatrix = [];
+
+    function createMatrixTables(n) {
+        // Inisialisasi atau resize matriks
+        if (waktuMatrix.length !== n) {
+            waktuMatrix = Array(n).fill().map(() => Array(n).fill(0));
+            biayaMatrix = Array(n).fill().map(() => Array(n).fill(0));
+        } else {
+            const newWaktu = Array(n).fill().map(() => Array(n).fill(0));
+            const newBiaya = Array(n).fill().map(() => Array(n).fill(0));
+            for (let i = 0; i < Math.min(n, waktuMatrix.length); i++) {
+                for (let j = 0; j < Math.min(n, waktuMatrix[i].length); j++) {
+                    newWaktu[i][j] = waktuMatrix[i][j];
+                    newBiaya[i][j] = biayaMatrix[i][j];
+                }
+            }
+            waktuMatrix = newWaktu;
+            biayaMatrix = newBiaya;
+        }
+
+        // Render tabel WAKTU
+        const waktuDiv = document.getElementById('waktuMatrixContainer');
+        waktuDiv.innerHTML = '<h3>⏱️ Matriks WAKTU</h3>';
+        const tableW = document.createElement('table');
+        let thead = '<thead><tr><th>Orang\\Job</th>';
+        for (let j = 0; j < n; j++) thead += '<th>J' + (j+1) + '</th>';
+        thead += '</tr></thead>';
+        tableW.innerHTML = thead;
+        const tbodyW = document.createElement('tbody');
+        for (let i = 0; i < n; i++) {
+            const tr = document.createElement('tr');
+            const th = document.createElement('th');
+            th.textContent = 'O' + (i+1);
+            tr.appendChild(th);
+            for (let j = 0; j < n; j++) {
+                const td = document.createElement('td');
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.value = waktuMatrix[i][j];
+                input.classList.add('matrix-cell');
+                input.addEventListener('change', ((row, col) => (e) => {
+                    let val = parseInt(e.target.value);
+                    if (isNaN(val)) val = 0;
+                    waktuMatrix[row][col] = val;
+                })(i, j));
+                td.appendChild(input);
+                tr.appendChild(td);
+            }
+            tbodyW.appendChild(tr);
+        }
+        tableW.appendChild(tbodyW);
+        waktuDiv.appendChild(tableW);
+
+        // Render tabel BIAYA
+        const biayaDiv = document.getElementById('biayaMatrixContainer');
+        biayaDiv.innerHTML = '<h3>💰 Matriks BIAYA</h3>';
+        const tableB = document.createElement('table');
+        tableB.innerHTML = thead;
+        const tbodyB = document.createElement('tbody');
+        for (let i = 0; i < n; i++) {
+            const tr = document.createElement('tr');
+            const th = document.createElement('th');
+            th.textContent = 'O' + (i+1);
+            tr.appendChild(th);
+            for (let j = 0; j < n; j++) {
+                const td = document.createElement('td');
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.value = biayaMatrix[i][j];
+                input.classList.add('matrix-cell');
+                input.addEventListener('change', ((row, col) => (e) => {
+                    let val = parseInt(e.target.value);
+                    if (isNaN(val)) val = 0;
+                    biayaMatrix[row][col] = val;
+                })(i, j));
+                td.appendChild(input);
+                tr.appendChild(td);
+            }
+            tbodyB.appendChild(tr);
+        }
+        tableB.appendChild(tbodyB);
+        biayaDiv.appendChild(tableB);
+    }
+
+    function resizeMatrices() {
+        const nInput = document.getElementById('nInput');
+        let n = parseInt(nInput.value);
+        if (isNaN(n)) n = 8;
+        if (n < 8) n = 8;
+        currentN = n;
+        createMatrixTables(currentN);
+    }
+
+    // Ekspos fungsi dan data untuk Person C
+    window.resizeMatrices = resizeMatrices;
+    window.getWaktuMatrix = () => waktuMatrix;
+    window.getBiayaMatrix = () => biayaMatrix;
+    window.getCurrentN = () => currentN;
+
+    // Inisialisasi pertama kali
+    resizeMatrices();
+</script>
+
 <!-- ==================== Ricko ==================== -->
 <!-- Ricko : Integrasi, memanggil algoritma, menampilkan hasil -->
 <script>
