@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Branch & Bound</title>
+    <style>
+        * { box-sizing: border-box; font-family: system-ui, 'Segoe UI', monospace; }
+        body { background: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { text-align: center; color: #1e3c72; }
+        .card { background: white; border-radius: 16px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 25px; }
+        .control-bar { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+        label { font-weight: bold; }
+        input[type="number"] { width: 80px; padding: 6px; font-size: 14px; }
+        button { background: #2c7da0; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { background: #1f5e7a; }
+        .matrix-panel { display: flex; flex-wrap: wrap; gap: 30px; justify-content: space-between; }
+        .matrix-box { flex: 1; min-width: 280px; overflow-x: auto; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        th, td { border: 1px solid #aaa; padding: 8px; text-align: center; }
+        th { background: #e9ecef; }
+        input.matrix-cell { width: 60px; text-align: center; border: 1px solid #ccc; border-radius: 4px; padding: 5px; }
+        .result { background: #e6f7ff; padding: 15px; border-radius: 12px; margin-top: 20px; }
+        .assignment { font-family: monospace; background: #fef9e6; padding: 10px; border-radius: 8px; }
+        .stat { font-size: 0.9em; color: #2c3e50; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📊 Assignment Problem Solver <span style="font-size:0.8rem;">(Branch & Bound)</span></h1>
+
+    <div class="card">
+        <div class="control-bar">
+            <label>Jumlah orang/job (n ≥ 8):</label>
+            <input type="number" id="nInput" value="8" min="8" max="12" step="1">
+            <button id="resizeBtn">▶ Ubah ukuran matriks</button>
+            <button id="solveBtn" style="background:#2e7d32;">✨ Hitung Optimal</button>
+        </div>
+
+        <div class="matrix-panel">
+            <div class="matrix-box" id="waktuMatrixContainer">
+                <h3>⏱ Matriks WAKTU</h3>
+            </div>
+            <div class="matrix-box" id="biayaMatrixContainer">
+                <h3>💰 Matriks BIAYA</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="card result" id="resultArea">
+        <h3>📌 Hasil Penugasan Optimal</h3>
+        <div id="output">Belum ada perhitungan.</div>
+    </div>
+</div>
+
+<!-- ==================== Ricko ==================== -->
+<!-- Ricko : Integrasi, memanggil algoritma, menampilkan hasil -->
+<script>
+    // Menghubungkan input dari Person B ke algoritma Person A,
+    // menampilkan hasil dan statistik di area output.
+
+    function solveAndDisplay() {
+        const n = window.getCurrentN();
+        const waktu = window.getWaktuMatrix();
+        const biaya = window.getBiayaMatrix();
+        if (waktu.length !== n || biaya.length !== n) {
+            document.getElementById('output').innerHTML = '<span style="color:red;">Error: Ukuran matriks tidak sesuai. Silakan tekan "Ubah ukuran matriks" terlebih dahulu.</span>';
+            return;
+        }
+
+        const resultW = window.branchAndBound(waktu);
+        const resultB = window.branchAndBound(biaya);
+
+        let html = `<div style="display:flex; gap:20px; flex-wrap:wrap;">`;
+        // Waktu
+        html += `<div style="flex:1; background:#f8f9fa; padding:12px; border-radius:12px;">
+                    <h4>⏱ Penugasan berdasarkan WAKTU</h4>
+                    <div class="assignment">`;
+        for (let i = 0; i < resultW.bestPath.length; i++) {
+            html += `Orang ${i+1} → Job ${resultW.bestPath[i]+1}<br>`;
+        }
+        html += `</div><strong>Total Waktu: ${resultW.bestCost}</strong><br>
+                 <span class="stat">📊 Simpul dikunjungi: ${resultW.nodesVisited} | ⏱ ${resultW.elapsedMs.toFixed(2)} ms</span>
+                 </div>`;
+        // Biaya
+        html += `<div style="flex:1; background:#f8f9fa; padding:12px; border-radius:12px;">
+                    <h4>💰 Penugasan berdasarkan BIAYA</h4>
+                    <div class="assignment">`;
+        for (let i = 0; i < resultB.bestPath.length; i++) {
+            html += `Orang ${i+1} → Job ${resultB.bestPath[i]+1}<br>`;
+        }
+        html += `</div><strong>Total Biaya: ${resultB.bestCost}</strong><br>
+                 <span class="stat">📊 Simpul dikunjungi: ${resultB.nodesVisited} | ⏱ ${resultB.elapsedMs.toFixed(2)} ms</span>
+                 </div>`;
+        html += `</div>`;
+
+        document.getElementById('output').innerHTML = html;
+    }
+    document.getElementById('solveBtn').addEventListener('click', () => {
+        solveAndDisplay();
+    });
+    document.getElementById('resizeBtn').addEventListener('click', () => {
+        window.resizeMatrices();
+    });
+</script>
+</body>
+</html>
