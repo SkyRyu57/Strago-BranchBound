@@ -1,40 +1,73 @@
-# Pemilihan Tim Proyek — Branch & Bound
+# Strago (Strategic Go)
 
-Aplikasi web untuk menyelesaikan persoalan **Pemilihan Tim Proyek** menggunakan algoritma **Branch & Bound** (Least-Cost / Best-First Search).
+**Strago** is a modern, browser-based implementation of the board game **Go**, built with React. It features a clean interface, AI-powered opponents using the Stockfish engine, and a robust match management system.
 
-## Deskripsi Persoalan
+## Features
 
-Diberikan **n** kandidat (n ≥ 12), masing-masing dengan biaya c[i]. Pilih tepat **k** orang (5 ≤ k ≤ 10) sehingga total biaya **≤ B** (batas anggaran) dan seminimal mungkin.
+- **Modern UI**: A sleek, dark-themed interface with smooth animations.
+- **AI Opponents**: Play against Stockfish with adjustable difficulty levels (Novice, Intermediate, Advanced, Master).
+- **Match Management**:
+  - Create matches with custom board sizes (9x9, 13x13, 19x19).
+  - Configure handicap stones and komi.
+  - Track game history and statistics.
+- **Multiplayer (Local)**: Hot-seat mode for two human players.
+- **Game Rules**: Full implementation of Go rules including passing, resignation, and score calculation (Area Scoring).
+- **Real-time Analysis**: View engine analysis for captured stones and game score.
+- **Responsive Design**: Playable on both desktop and mobile devices.
 
-## Fitur
+## Getting Started
 
-- **Input dinamis**: Jumlah kandidat (n), ukuran tim (k), dan batas anggaran (B) dapat diatur bebas.
-- **Preset contoh**: Tersedia preset Small (n=12), Medium (n=18), dan Large (n=24) untuk demo cepat.
-- **Generator acak**: Tombol "Acak Biaya" untuk mengisi biaya kandidat secara random.
-- **Algoritma Branch & Bound**: Menggunakan strategi Least-Cost Search dengan Priority Queue dan pruning berbasis Lower Bound.
-- **Ringkasan proses B&B**: Tabel detail yang mencatat setiap simpul — keputusan (pilih/lewati), biaya saat ini, lower bound, dan status (diekspansi, solusi layak, atau dipangkas).
-- **Metrik eksekusi**: Waktu eksekusi (ms), total simpul dibangkitkan, simpul diekspansi, dan simpul dipangkas.
+### Prerequisites
 
-## Cara Menjalankan
+- [Node.js](https://nodejs.org/) (v14 or higher recommended)
+- [npm](https://www.npmjs.com/)
 
-Tidak diperlukan instalasi atau build. Cukup buka file `Branch&Bound.html` di browser:
+### Installation
 
-1. Buka file `Branch&Bound.html` langsung di browser (double-click atau drag ke browser).
-2. Atur parameter (n, k, B) dan biaya tiap kandidat.
-3. Klik **"Hitung Tim Optimal"**.
-4. Lihat hasil tim terpilih dan ringkasan proses Branch & Bound.
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd Strago-BranchBound
+   ```
 
-## Struktur File
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
+### Running the Application
+
+Start the development server:
+
+```bash
+npm start
 ```
-├── Branch&Bound.html   # Halaman utama (struktur HTML)
-├── style.css           # Stylesheet (layout, warna, tabel)
-├── script.js           # Logika aplikasi & algoritma B&B
-└── README.md           # Dokumentasi proyek
-```
 
-## Teknologi
+Open [http://localhost:3000](http://localhost:3000) to view the app in your browser.
 
-- **HTML5**: Struktur halaman
-- **CSS3**: Styling (vanilla CSS, tanpa framework)
-- **JavaScript (ES6+)**: Logika algoritma dan interaksi UI (tanpa library eksternal)
+## Project Structure
+
+- `src/`: Source code for the application.
+- `src/components/`: React components (Board, Card, MatchDetail, etc.).
+- `src/assets/`: Static assets (images, JSON data).
+- `src/services/`: Business logic and API interactions (MatchService, EngineService).
+- `src/pages/`: Main pages of the application (HomePage, Dashboard, CreateMatchPage, etc.).
+
+## Technologies Used
+
+- **React**: UI library
+- **React Router**: Navigation
+- **Tailwind CSS**: Styling
+- **Stockfish**: AI engine (loaded via WebAssembly)
+- **Material UI**: Additional UI components and icons
+
+## Usage
+
+1. **Home Page**: Click "Start Playing" to begin.
+2. **Dashboard**: View your current matches and statistics.
+3. **Create Match**: Configure a new game with your desired settings.
+4. **Play**: Click on the board to place stones. The AI will play automatically when enabled.
+
+## License
+
+This project is proprietary. All rights reserved.
