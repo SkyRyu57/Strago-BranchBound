@@ -3,217 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Branch & Bound</title>
-    <style>
-        * { box-sizing: border-box; font-family: system-ui, 'Segoe UI', monospace; }
-        body { background: #f0f2f5; margin: 0; padding: 20px; }
-        .container { max-width: 1400px; margin: 0 auto; }
-        h1 { text-align: center; color: #1e3c72; }
-        .card { background: white; border-radius: 16px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 25px; }
-        .control-bar { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
-        label { font-weight: bold; }
-        input[type="number"] { width: 80px; padding: 6px; font-size: 14px; }
-        button { background: #2c7da0; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        button:hover { background: #1f5e7a; }
-        .matrix-panel { display: flex; flex-wrap: wrap; gap: 30px; justify-content: space-between; }
-        .matrix-box { flex: 1; min-width: 280px; overflow-x: auto; }
-        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-        th, td { border: 1px solid #aaa; padding: 8px; text-align: center; }
-        th { background: #e9ecef; }
-        input.matrix-cell { width: 60px; text-align: center; border: 1px solid #ccc; border-radius: 4px; padding: 5px; }
-        .result { background: #e6f7ff; padding: 15px; border-radius: 12px; margin-top: 20px; }
-        .assignment { font-family: monospace; background: #fef9e6; padding: 10px; border-radius: 8px; }
-        .stat { font-size: 0.9em; color: #2c3e50; }
-    </style>
+    <title>Pemilihan Tim Proyek - Branch & Bound</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="container">
-    <h1>📊 Assignment Problem Solver <span style="font-size:0.8rem;">(Branch & Bound)</span></h1>
+    <header>
+        <h1>📊 Pemilihan Tim Proyek</h1>
+        <p>Menyelesaikan persoalan pemilihan <strong>k</strong> kandidat dari pool berisi <strong>n</strong> orang agar total biaya <strong>&le; B</strong> (Optimalisasi Branch & Bound)</p>
+    </header>
 
     <div class="card">
-        <div class="control-bar">
-            <label>Jumlah orang/job (n ≥ 8):</label>
-            <input type="number" id="nInput" value="8" min="8" max="12" step="1">
-            <button id="resizeBtn">▶ Ubah ukuran matriks</button>
-            <button id="solveBtn" style="background:#2e7d32;">✨ Hitung Optimal</button>
+        <h2>🛠️ Kontrol Parameter & Input</h2>
+        
+        <div class="control-grid">
+            <div class="control-group">
+                <label for="nInput">Ukuran Pool Calon (n &ge; 12):</label>
+                <input type="number" id="nInput" value="12" min="12" step="1">
+            </div>
+            <div class="control-group">
+                <label for="kInput">Ukuran Tim Pilihan (5 &le; k &le; 10):</label>
+                <input type="number" id="kInput" value="5" min="5" max="10" step="1">
+            </div>
+            <div class="control-group">
+                <label for="budgetInput">Batas Anggaran Proyek (B):</label>
+                <input type="number" id="budgetInput" value="150" min="1" step="5">
+            </div>
         </div>
 
-        <div class="matrix-panel">
-            <div class="matrix-box" id="waktuMatrixContainer">
-                <h3>⏱ Matriks WAKTU</h3>
-            </div>
-            <div class="matrix-box" id="biayaMatrixContainer">
-                <h3>💰 Matriks BIAYA</h3>
-            </div>
+        <div class="quick-presets">
+            <span>Contoh Ukuran Pool:</span>
+            <button type="button" class="secondary preset-btn" data-size="small">Small (n=12)</button>
+            <button type="button" class="secondary preset-btn" data-size="medium">Medium (n=18)</button>
+            <button type="button" class="secondary preset-btn" data-size="large">Large (n=24)</button>
+        </div>
+
+        <div class="btn-group">
+            <button type="button" id="generateRandomBtn" class="secondary">🎲 Acak Biaya</button>
+            <button type="button" id="solveBtn" class="success">✨ Hitung Tim Optimal</button>
+        </div>
+
+        <h3 style="margin-top:25px; margin-bottom:10px; color:#4a5568; font-size:1.05rem;">Masukkan Biaya c[i] untuk Setiap Kandidat:</h3>
+        <div class="candidate-grid" id="candidateInputsContainer">
+            <!-- Diisi secara dinamis lewat JS -->
         </div>
     </div>
 
-    <div class="card result" id="resultArea">
-        <h3>📌 Hasil Penugasan Optimal</h3>
-        <div id="output">Belum ada perhitungan.</div>
+    <div class="card" id="resultArea" style="display: none;">
+        <h2>📌 Hasil Pemilihan Tim Optimal</h2>
+        <div id="outputArea">
+            <!-- Hasil pencarian Branch & Bound akan ditaruh di sini -->
+        </div>
     </div>
 </div>
 
-<!-- ==================== Dominic ==================== -->
-<!-- Dominic: Input matriks dinamis, render tabel, resize -->
-<script>
-    // Tugas: Membuat antarmuka tabel input untuk matriks WAKTU dan BIAYA,
-    // menangani perubahan ukuran n, menyimpan data matriks.
-
-    let currentN = 8;
-    let waktuMatrix = [];
-    let biayaMatrix = [];
-
-    function createMatrixTables(n) {
-        // Inisialisasi atau resize matriks
-        if (waktuMatrix.length !== n) {
-            waktuMatrix = Array(n).fill().map(() => Array(n).fill(0));
-            biayaMatrix = Array(n).fill().map(() => Array(n).fill(0));
-        } else {
-            const newWaktu = Array(n).fill().map(() => Array(n).fill(0));
-            const newBiaya = Array(n).fill().map(() => Array(n).fill(0));
-            for (let i = 0; i < Math.min(n, waktuMatrix.length); i++) {
-                for (let j = 0; j < Math.min(n, waktuMatrix[i].length); j++) {
-                    newWaktu[i][j] = waktuMatrix[i][j];
-                    newBiaya[i][j] = biayaMatrix[i][j];
-                }
-            }
-            waktuMatrix = newWaktu;
-            biayaMatrix = newBiaya;
-        }
-
-        // Render tabel WAKTU
-        const waktuDiv = document.getElementById('waktuMatrixContainer');
-        waktuDiv.innerHTML = '<h3>⏱️ Matriks WAKTU</h3>';
-        const tableW = document.createElement('table');
-        let thead = '<thead><tr><th>Orang\\Job</th>';
-        for (let j = 0; j < n; j++) thead += '<th>J' + (j+1) + '</th>';
-        thead += '</tr></thead>';
-        tableW.innerHTML = thead;
-        const tbodyW = document.createElement('tbody');
-        for (let i = 0; i < n; i++) {
-            const tr = document.createElement('tr');
-            const th = document.createElement('th');
-            th.textContent = 'O' + (i+1);
-            tr.appendChild(th);
-            for (let j = 0; j < n; j++) {
-                const td = document.createElement('td');
-                const input = document.createElement('input');
-                input.type = 'number';
-                input.value = waktuMatrix[i][j];
-                input.classList.add('matrix-cell');
-                input.addEventListener('change', ((row, col) => (e) => {
-                    let val = parseInt(e.target.value);
-                    if (isNaN(val)) val = 0;
-                    waktuMatrix[row][col] = val;
-                })(i, j));
-                td.appendChild(input);
-                tr.appendChild(td);
-            }
-            tbodyW.appendChild(tr);
-        }
-        tableW.appendChild(tbodyW);
-        waktuDiv.appendChild(tableW);
-
-        // Render tabel BIAYA
-        const biayaDiv = document.getElementById('biayaMatrixContainer');
-        biayaDiv.innerHTML = '<h3>💰 Matriks BIAYA</h3>';
-        const tableB = document.createElement('table');
-        tableB.innerHTML = thead;
-        const tbodyB = document.createElement('tbody');
-        for (let i = 0; i < n; i++) {
-            const tr = document.createElement('tr');
-            const th = document.createElement('th');
-            th.textContent = 'O' + (i+1);
-            tr.appendChild(th);
-            for (let j = 0; j < n; j++) {
-                const td = document.createElement('td');
-                const input = document.createElement('input');
-                input.type = 'number';
-                input.value = biayaMatrix[i][j];
-                input.classList.add('matrix-cell');
-                input.addEventListener('change', ((row, col) => (e) => {
-                    let val = parseInt(e.target.value);
-                    if (isNaN(val)) val = 0;
-                    biayaMatrix[row][col] = val;
-                })(i, j));
-                td.appendChild(input);
-                tr.appendChild(td);
-            }
-            tbodyB.appendChild(tr);
-        }
-        tableB.appendChild(tbodyB);
-        biayaDiv.appendChild(tableB);
-    }
-
-    function resizeMatrices() {
-        const nInput = document.getElementById('nInput');
-        let n = parseInt(nInput.value);
-        if (isNaN(n)) n = 8;
-        if (n < 8) n = 8;
-        currentN = n;
-        createMatrixTables(currentN);
-    }
-
-    // Ekspos fungsi dan data untuk Person C
-    window.resizeMatrices = resizeMatrices;
-    window.getWaktuMatrix = () => waktuMatrix;
-    window.getBiayaMatrix = () => biayaMatrix;
-    window.getCurrentN = () => currentN;
-
-    // Inisialisasi pertama kali
-    resizeMatrices();
-</script>
-
-<!-- ==================== Ricko ==================== -->
-<!-- Ricko : Integrasi, memanggil algoritma, menampilkan hasil -->
-<script>
-    // Menghubungkan input dari Person B ke algoritma Person A,
-    // menampilkan hasil dan statistik di area output.
-
-    function solveAndDisplay() {
-        const n = window.getCurrentN();
-        const waktu = window.getWaktuMatrix();
-        const biaya = window.getBiayaMatrix();
-        if (waktu.length !== n || biaya.length !== n) {
-            document.getElementById('output').innerHTML = '<span style="color:red;">Error: Ukuran matriks tidak sesuai. Silakan tekan "Ubah ukuran matriks" terlebih dahulu.</span>';
-            return;
-        }
-
-        const resultW = window.branchAndBound(waktu);
-        const resultB = window.branchAndBound(biaya);
-
-        let html = `<div style="display:flex; gap:20px; flex-wrap:wrap;">`;
-        // Waktu
-        html += `<div style="flex:1; background:#f8f9fa; padding:12px; border-radius:12px;">
-                    <h4>⏱ Penugasan berdasarkan WAKTU</h4>
-                    <div class="assignment">`;
-        for (let i = 0; i < resultW.bestPath.length; i++) {
-            html += `Orang ${i+1} → Job ${resultW.bestPath[i]+1}<br>`;
-        }
-        html += `</div><strong>Total Waktu: ${resultW.bestCost}</strong><br>
-                 <span class="stat">📊 Simpul dikunjungi: ${resultW.nodesVisited} | ⏱ ${resultW.elapsedMs.toFixed(2)} ms</span>
-                 </div>`;
-        // Biaya
-        html += `<div style="flex:1; background:#f8f9fa; padding:12px; border-radius:12px;">
-                    <h4>💰 Penugasan berdasarkan BIAYA</h4>
-                    <div class="assignment">`;
-        for (let i = 0; i < resultB.bestPath.length; i++) {
-            html += `Orang ${i+1} → Job ${resultB.bestPath[i]+1}<br>`;
-        }
-        html += `</div><strong>Total Biaya: ${resultB.bestCost}</strong><br>
-                 <span class="stat">📊 Simpul dikunjungi: ${resultB.nodesVisited} | ⏱ ${resultB.elapsedMs.toFixed(2)} ms</span>
-                 </div>`;
-        html += `</div>`;
-
-        document.getElementById('output').innerHTML = html;
-    }
-    document.getElementById('solveBtn').addEventListener('click', () => {
-        solveAndDisplay();
-    });
-    document.getElementById('resizeBtn').addEventListener('click', () => {
-        window.resizeMatrices();
-    });
-</script>
+<script src="script.js"></script>
 </body>
 </html>
