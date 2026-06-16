@@ -106,18 +106,67 @@ function generateRandomCosts() {
 // ==================== ALGORITMA BRANCH & BOUND ====================
 
 function solveProjectSelection() {
-    const n = parseInt(document.getElementById("nInput").value);
-    const k = parseInt(document.getElementById("kInput").value);
-    const budget = parseInt(document.getElementById("budgetInput").value);
+    const nInputEl = document.getElementById("nInput");
+    const kInputEl = document.getElementById("kInput");
+    const budgetInputEl = document.getElementById("budgetInput");
+
+    const n = parseInt(nInputEl.value);
+    const k = parseInt(kInputEl.value);
+    const budget = parseInt(budgetInputEl.value);
+
+    const outputDiv = document.getElementById("outputArea");
+    const resultArea = document.getElementById("resultArea");
+
+    // Tampilkan panel hasil
+    resultArea.style.display = "block";
+    outputDiv.innerHTML = "";
+
+    // Validasi input robust
+    let errors = [];
+
+    if (isNaN(budget) || budgetInputEl.value.trim() === "") {
+        errors.push("Batas Anggaran Proyek (B) tidak boleh kosong.");
+    } else if (budget < 0) {
+        errors.push("Batas Anggaran Proyek (B) tidak boleh negatif.");
+    }
+
+    if (isNaN(n) || nInputEl.value.trim() === "") {
+        errors.push("Ukuran Pool Calon (n) tidak boleh kosong.");
+    } else if (n < 12) {
+        errors.push("Ukuran Pool Calon (n) harus minimal 12.");
+    }
+
+    if (isNaN(k) || kInputEl.value.trim() === "") {
+        errors.push("Ukuran Tim Pilihan (k) tidak boleh kosong.");
+    } else if (k < 5 || k > 10) {
+        errors.push("Ukuran Tim Pilihan (k) harus antara 5 dan 10.");
+    }
+
+    if (!isNaN(n) && !isNaN(k) && k > n) {
+        errors.push("Ukuran Tim Pilihan (k) tidak boleh melebihi Ukuran Pool Calon (n).");
+    }
+
+    if (errors.length > 0) {
+        outputDiv.innerHTML = `
+            <div class="error-message">
+                <strong>Kesalahan Validasi Input:</strong>
+                <ul style="margin-left: 20px; margin-top: 5px;">
+                    ${errors.map(err => `<li>${err}</li>`).join("")}
+                </ul>
+            </div>
+        `;
+        return;
+    }
 
     // Ambil data biaya kandidat dari input
     const originalCandidates = [];
     for (let i = 0; i < n; i++) {
-        const costVal = parseInt(document.getElementById(`cost_${i}`).value);
+        const inputEl = document.getElementById(`cost_${i}`);
+        const costVal = inputEl ? parseInt(inputEl.value) : NaN;
         originalCandidates.push({
             idx: i, // Indeks asli sebelum diurutkan
             name: `Kandidat ${i + 1}`,
-            cost: isNaN(costVal) ? 10 : costVal
+            cost: isNaN(costVal) || costVal < 0 ? 10 : costVal
         });
     }
 
@@ -126,16 +175,24 @@ function solveProjectSelection() {
 
     const startTime = performance.now();
 
-    // 1. Cek Kelayakan Awal
-    // Hitung biaya tim termurah yang mungkin terbentuk
-    let cheapestCost = 0;
-    for (let i = 0; i < k; i++) {
-        cheapestCost += sortedCandidates[i].cost;
+    // Helper untuk menghitung Lower Bound secara akademis
+    function calculateLowerBound(cost, level, selectedCount, kVal, candidatesArr, nVal) {
+        const elementsNeeded = kVal - selectedCount;
+        if (elementsNeeded === 0) return cost;
+        if (elementsNeeded < 0) return Infinity;
+        const remainingInPool = nVal - (level + 1);
+        if (remainingInPool < elementsNeeded) return Infinity;
+        
+        let lb = cost;
+        for (let i = 0; i < elementsNeeded; i++) {
+            lb += candidatesArr[level + 1 + i].cost;
+        }
+        return lb;
     }
 
-    const outputDiv = document.getElementById("outputArea");
-    const resultArea = document.getElementById("resultArea");
-    resultArea.style.display = "block";
+    // 1. Cek Kelayakan Awal
+    // Hitung biaya tim termurah yang mungkin terbentuk
+    const cheapestCost = calculateLowerBound(0, -1, 0, k, sortedCandidates, n);
 
     if (cheapestCost > budget) {
         const elapsed = (performance.now() - startTime).toFixed(3);
@@ -166,9 +223,9 @@ function solveProjectSelection() {
                     <thead>
                         <tr>
                             <th>Simpul ID</th>
+                            <th>Parent ID</th>
                             <th>Keputusan</th>
-                            <th>Level</th>
-                            <th>Anggota Terpilih</th>
+                            <th>Jumlah Anggota</th>
                             <th>Biaya Sekarang</th>
                             <th>Lower Bound</th>
                             <th>Status</th>
@@ -177,12 +234,12 @@ function solveProjectSelection() {
                     <tbody>
                         <tr>
                             <td>0</td>
-                            <td>Root (Awal)</td>
                             <td>-</td>
-                            <td>[]</td>
+                            <td>Mulai Pencarian (Root)</td>
+                            <td>0 (-)</td>
                             <td>0</td>
                             <td>${cheapestCost}</td>
-                            <td><span class="badge badge-pruned">Pruned (Exceeds Budget)</span></td>
+                            <td><span class="badge badge-pruned">Node []: PRUNED (Exceeds Budget)</span></td>
                         </tr>
                     </tbody>
                 </table>
@@ -218,9 +275,6 @@ function solveProjectSelection() {
     const pq = [rootNode];
     nodeTrace.push(rootNode);
 
-    // bestCost dimulai dari Infinity agar algoritma B&B benar-benar menjelajahi
-    // pohon ruang status dan menemukan solusi secara alami (bukan di-preset).
-
     while (pq.length > 0) {
         // Urutkan PQ berdasarkan lowerBound (Least-Cost Search)
         pq.sort((a, b) => a.lowerBound - b.lowerBound);
@@ -231,7 +285,8 @@ function solveProjectSelection() {
         // Jika lower bound simpul saat ini sudah lebih buruk daripada bestCost yang ditemukan,
         // kita bisa pangkas simpul ini dan semua simpul tersisa di PQ (karena PQ terurut menaik)
         if (curr.lowerBound >= bestCost) {
-            curr.status = "Pruned (Exceeds Best Cost)";
+            const nodeRep = "Node [" + curr.selected.map(m => m.name.replace("Kandidat ", "K")).join(", ") + "]";
+            curr.status = `${nodeRep}: PRUNED (LB [${curr.lowerBound}] >= Best Cost [${bestCost}])`;
             nodesPruned++;
             continue;
         }
@@ -243,7 +298,8 @@ function solveProjectSelection() {
                 bestTeam = curr.selected;
                 curr.status = "Solution Found";
             } else {
-                curr.status = "Pruned (Suboptimal)";
+                const nodeRep = "Node [" + curr.selected.map(m => m.name.replace("Kandidat ", "K")).join(", ") + "]";
+                curr.status = `${nodeRep}: PRUNED (LB [${curr.cost}] >= Best Cost [${bestCost}])`;
                 nodesPruned++;
             }
             continue;
@@ -251,7 +307,8 @@ function solveProjectSelection() {
 
         // Jika level sudah mencapai akhir dari kandidat tetapi belum mencapai ukuran k
         if (curr.level === n - 1) {
-            curr.status = "Pruned (Infeasible - Not enough candidates)";
+            const nodeRep = "Node [" + curr.selected.map(m => m.name.replace("Kandidat ", "K")).join(", ") + "]";
+            curr.status = `${nodeRep}: PRUNED (Infeasible - Not enough candidates)`;
             nodesPruned++;
             continue;
         }
@@ -263,87 +320,90 @@ function solveProjectSelection() {
         const nextCandidate = sortedCandidates[nextIdx];
 
         // --- CABANG 1: Pilih Kandidat `nextIdx` ---
-        const remainingNeededIn = k - (curr.selected.length + 1);
+        const newSelectedIn = [...curr.selected, nextCandidate];
+        const newCostIn = curr.cost + nextCandidate.cost;
+        const mIn = newSelectedIn.length;
+        const lbIn = calculateLowerBound(newCostIn, nextIdx, mIn, k, sortedCandidates, n);
         
-        // Cek apakah sisa kandidat yang tersedia di pool cukup untuk melengkapi tim ukuran k
-        if (n - 1 - nextIdx >= remainingNeededIn) {
-            const newSelected = [...curr.selected, nextCandidate];
-            const newCost = curr.cost + nextCandidate.cost;
+        nodesGenerated++;
+        const childIn = {
+            id: nodesGenerated,
+            level: nextIdx,
+            selected: newSelectedIn,
+            cost: newCostIn,
+            lowerBound: lbIn,
+            parentId: curr.id,
+            decision: `Pilih ${nextCandidate.name}`,
+            status: "Active"
+        };
+        
+        const nodeRepIn = "Node [" + newSelectedIn.map(m => m.name.replace("Kandidat ", "K")).join(", ") + "]";
 
-            if (newCost <= budget) {
-                nodesGenerated++;
-                // Hitung lower bound untuk cabang ini
-                // Lower bound = biaya saat ini + sum dari (k - selected.length) elemen termurah berikutnya
-                let lb = newCost;
-                for (let i = 0; i < remainingNeededIn; i++) {
-                    lb += sortedCandidates[nextIdx + 1 + i].cost;
-                }
-
-                const childIn = {
-                    id: nodesGenerated,
-                    level: nextIdx,
-                    selected: newSelected,
-                    cost: newCost,
-                    lowerBound: lb,
-                    parentId: curr.id,
-                    decision: `Pilih ${nextCandidate.name}`,
-                    status: "Active"
-                };
-
-                if (lb <= budget && lb < bestCost) {
-                    if (newSelected.length === k) {
-                        bestCost = newCost;
-                        bestTeam = newSelected;
-                        childIn.status = "Solution Found";
-                    } else {
-                        pq.push(childIn);
-                    }
-                } else if (lb > budget) {
-                    childIn.status = "Pruned (Exceeds Budget)";
-                    nodesPruned++;
-                } else {
-                    childIn.status = "Pruned (Suboptimal)";
-                    nodesPruned++;
-                }
-                nodeTrace.push(childIn);
+        if (newCostIn > budget) {
+            childIn.status = `${nodeRepIn}: PRUNED (Exceeds Budget)`;
+            nodesPruned++;
+        } else if (lbIn === Infinity) {
+            childIn.status = `${nodeRepIn}: PRUNED (Infeasible - Not enough candidates)`;
+            nodesPruned++;
+        } else if (lbIn > budget) {
+            childIn.status = `${nodeRepIn}: PRUNED (Exceeds Budget)`;
+            nodesPruned++;
+        } else if (lbIn >= bestCost) {
+            childIn.status = `${nodeRepIn}: PRUNED (LB [${lbIn}] >= Best Cost [${bestCost}])`;
+            nodesPruned++;
+        } else {
+            if (mIn === k) {
+                bestCost = newCostIn;
+                bestTeam = newSelectedIn;
+                childIn.status = "Solution Found";
+            } else {
+                pq.push(childIn);
             }
         }
+        nodeTrace.push(childIn);
 
         // --- CABANG 2: Lewati Kandidat `nextIdx` ---
-        const remainingNeededEx = k - curr.selected.length;
+        const newSelectedEx = [...curr.selected];
+        const newCostEx = curr.cost;
+        const mEx = newSelectedEx.length;
+        const lbEx = calculateLowerBound(newCostEx, nextIdx, mEx, k, sortedCandidates, n);
         
-        // Cek apakah sisa kandidat yang tersedia di pool cukup untuk melengkapi tim ukuran k
-        if (n - 1 - nextIdx >= remainingNeededEx) {
-            nodesGenerated++;
-            
-            // Hitung lower bound untuk cabang ini
-            let lb = curr.cost;
-            for (let i = 0; i < remainingNeededEx; i++) {
-                lb += sortedCandidates[nextIdx + 1 + i].cost;
-            }
+        nodesGenerated++;
+        const childEx = {
+            id: nodesGenerated,
+            level: nextIdx,
+            selected: newSelectedEx,
+            cost: newCostEx,
+            lowerBound: lbEx,
+            parentId: curr.id,
+            decision: `Lewati ${nextCandidate.name}`,
+            status: "Active"
+        };
+        
+        const nodeRepEx = "Node [" + newSelectedEx.map(m => m.name.replace("Kandidat ", "K")).join(", ") + "]";
 
-            const childEx = {
-                id: nodesGenerated,
-                level: nextIdx,
-                selected: [...curr.selected],
-                cost: curr.cost,
-                lowerBound: lb,
-                parentId: curr.id,
-                decision: `Lewati ${nextCandidate.name}`,
-                status: "Active"
-            };
-
-            if (lb <= budget && lb < bestCost) {
-                pq.push(childEx);
-            } else if (lb > budget) {
-                childEx.status = "Pruned (Exceeds Budget)";
-                nodesPruned++;
+        if (newCostEx > budget) {
+            childEx.status = `${nodeRepEx}: PRUNED (Exceeds Budget)`;
+            nodesPruned++;
+        } else if (lbEx === Infinity) {
+            childEx.status = `${nodeRepEx}: PRUNED (Infeasible - Not enough candidates)`;
+            nodesPruned++;
+        } else if (lbEx > budget) {
+            childEx.status = `${nodeRepEx}: PRUNED (Exceeds Budget)`;
+            nodesPruned++;
+        } else if (lbEx >= bestCost) {
+            childEx.status = `${nodeRepEx}: PRUNED (LB [${lbEx}] >= Best Cost [${bestCost}])`;
+            nodesPruned++;
+        } else {
+            if (mEx === k) {
+                bestCost = newCostEx;
+                bestTeam = newSelectedEx;
+                childEx.status = "Solution Found";
             } else {
-                childEx.status = "Pruned (Suboptimal)";
-                nodesPruned++;
+                pq.push(childEx);
             }
-            nodeTrace.push(childEx);
         }
+        nodeTrace.push(childEx);
     }
 
     // Hitung waktu eksekusi
@@ -352,18 +412,12 @@ function solveProjectSelection() {
     // Perbarui status akhir dari simpul di jejak untuk visualisasi yang akurat
     nodeTrace.forEach(node => {
         if (node.status === "Active" && node.selected.length !== k) {
-            // Jika pencarian selesai dan simpul masih aktif di PQ, artinya simpul tersebut dipangkas
-            if (node.lowerBound >= bestCost) {
-                node.status = "Pruned (Exceeds Best Cost)";
-                nodesPruned++;
-            } else {
-                node.status = "Not Explored (Pruned by optimality)";
-                nodesPruned++;
-            }
+            const nodeRep = "Node [" + node.selected.map(m => m.name.replace("Kandidat ", "K")).join(", ") + "]";
+            node.status = `${nodeRep}: PRUNED (LB [${node.lowerBound}] >= Best Cost [${bestCost}])`;
         }
         if (node.status === "Solution Found" && node.cost !== bestCost) {
-            node.status = "Pruned (Suboptimal Solution)";
-            nodesPruned++;
+            const nodeRep = "Node [" + node.selected.map(m => m.name.replace("Kandidat ", "K")).join(", ") + "]";
+            node.status = `${nodeRep}: PRUNED (LB [${node.cost}] >= Best Cost [${bestCost}])`;
         }
     });
 
@@ -443,7 +497,7 @@ function renderResults(bestTeam, bestCost, elapsed, totalNodes, expandedNodes, p
         if (node.status.includes("Solution")) {
             badgeClass = "badge-solution";
             displayStatus = "Solusi Layak";
-        } else if (node.status.includes("Pruned") || node.status.includes("Not Explored")) {
+        } else if (node.status.includes("Pruned") || node.status.includes("PRUNED") || node.status.includes("Not Explored")) {
             badgeClass = "badge-pruned";
         } else if (node.status.includes("Expanded")) {
             badgeClass = "badge-active";
@@ -460,7 +514,7 @@ function renderResults(bestTeam, bestCost, elapsed, totalNodes, expandedNodes, p
                 <td>${node.decision}</td>
                 <td>${node.selected.length} (${nameList ? nameList : "-"})</td>
                 <td>${node.cost}</td>
-                <td><strong>${node.lowerBound}</strong></td>
+                <td><strong>${node.lowerBound === Infinity ? "Infinity" : node.lowerBound}</strong></td>
                 <td><span class="badge ${badgeClass}">${displayStatus}</span></td>
             </tr>
         `;
