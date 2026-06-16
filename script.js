@@ -394,7 +394,7 @@ function renderResults(bestTeam, bestCost, elapsed, totalNodes, expandedNodes, p
 
     html += `
         </ul>
-        <p style="font-size: 1.1rem; margin-top: 15px;">💰 Total Biaya Optimal: <strong style="color: #2f855a; font-size:1.3rem;">${bestCost}</strong></p>
+        <p style="font-size: 1.1rem; margin-top: 15px;">Total Biaya Optimal: <strong style="color: #2f855a; font-size:1.3rem;">${bestCost}</strong></p>
         
         <div class="metrics-flex">
             <div class="metric-box">
